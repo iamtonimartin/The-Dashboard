@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  --color-forest: #1A3A2A;
+  --color-terracotta: #C0583A;
+  --color-cream: #F5F0E8;
+  
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --radius-3xl: 1.5rem;
+}
+
+@layer base {
+  body {
+    @apply bg-cream text-forest font-sans antialiased;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-3xl p-6 md:p-8 border border-forest/5 shadow-sm transition-all duration-300;
+  }
+  
+  .btn-primary {
+    @apply bg-terracotta text-white px-6 py-3 rounded-2xl font-medium hover:bg-terracotta/90 transition-colors disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply bg-forest text-white px-6 py-3 rounded-2xl font-medium hover:bg-forest/90 transition-colors;
+  }
+
+  .input-field {
+    @apply w-full bg-cream/50 border border-forest/10 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-terracotta/20 transition-all;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-cream;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-forest/20 rounded-full hover:bg-forest/30;
+}
