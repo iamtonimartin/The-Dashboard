@@ -1,22 +1,37 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { 
-  Upload, 
-  FileText, 
-  Image as ImageIcon, 
-  FileCode, 
-  Search, 
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  Upload,
+  FileText,
+  Image as ImageIcon,
+  FileCode,
+  Search,
   MessageSquare,
   Bot,
   Send,
   Paperclip,
   MoreVertical,
-  User
+  User,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+const INITIAL_MESSAGES: ChatMessage[] = [
+  {
+    role: 'assistant',
+    content: "Hello! I'm your HQ Co-Pilot. Upload documents to your Knowledge Base and I can answer questions about them. What would you like to know?",
+  },
+];
+
 export default function KnowledgeBase() {
   const [query, setQuery] = useState('');
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
+  const [isLoading, setIsLoading] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   const uploads = [
     { name: 'Q2 Strategy.pdf', size: '2.4 MB', type: 'pdf', date: '2h ago' },
@@ -25,13 +40,46 @@ export default function KnowledgeBase() {
     { name: 'Architecture.png', size: '4.2 MB', type: 'img', date: 'Mar 20' },
   ];
 
-  const chat = [
-    { role: 'user', content: 'What were the main risks identified in the Q2 Strategy document?' },
-    { role: 'assistant', content: 'Based on the "Q2 Strategy.pdf" (page 14), the primary risks are: \n\n1. Market saturation in the enterprise segment.\n2. Potential delays in the AI integration module.\n3. Competitive pressure from emerging low-code platforms.\n\nWould you like me to draft a mitigation plan for these?' },
-  ];
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages, isLoading]);
+
+  const handleSend = async () => {
+    const content = query.trim();
+    if (!content || isLoading) return;
+
+    const userMessage: ChatMessage = { role: 'user', content };
+    const updatedMessages = [...chatMessages, userMessage];
+
+    setChatMessages(updatedMessages);
+    setQuery('');
+    setIsLoading(true);
+
+    try {
+      const res = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: updatedMessages }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setChatMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: data.content ?? 'Sorry, I could not generate a response.' },
+      ]);
+    } catch {
+      setChatMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: 'Sorry, something went wrong. Please try again.' },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const getIcon = (type: string) => {
-    switch(type) {
+    switch (type) {
       case 'pdf': return <FileText className="text-red-500" />;
       case 'img': return <ImageIcon className="text-blue-500" />;
       case 'doc': return <FileCode className="text-indigo-500" />;
@@ -45,9 +93,9 @@ export default function KnowledgeBase() {
         <h1 className="text-4xl font-bold tracking-tight text-forest">Knowledge Base</h1>
         <div className="relative w-96">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-forest/20" />
-          <input 
-            type="text" 
-            placeholder="Search your digital brain..." 
+          <input
+            type="text"
+            placeholder="Search your digital brain..."
             className="input-field pl-12"
           />
         </div>
@@ -96,52 +144,80 @@ export default function KnowledgeBase() {
               </div>
               <div>
                 <h3 className="font-bold text-forest">HQ Co-Pilot</h3>
-                <p className="text-[10px] font-bold text-green-600 uppercase tracking-widest">Online • Referencing 12 Docs</p>
+                <p className="text-[10px] font-bold text-green-600 uppercase tracking-widest">Online • GPT-4o</p>
               </div>
             </div>
-            <button className="p-2 hover:bg-cream rounded-xl transition-colors">
+            <button
+              onClick={() => setChatMessages(INITIAL_MESSAGES)}
+              className="p-2 hover:bg-cream rounded-xl transition-colors"
+              title="Clear chat"
+            >
               <MessageSquare className="w-5 h-5 text-forest/40" />
             </button>
           </div>
 
           <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-cream/10">
-            {chat.map((msg, i) => (
+            {chatMessages.map((msg, i) => (
               <div key={i} className={cn(
-                "flex max-w-[80%]",
-                msg.role === 'user' ? "ml-auto flex-row-reverse" : "mr-auto"
+                'flex max-w-[80%]',
+                msg.role === 'user' ? 'ml-auto flex-row-reverse' : 'mr-auto'
               )}>
                 <div className={cn(
-                  "w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center",
-                  msg.role === 'user' ? "bg-terracotta ml-3" : "bg-forest mr-3"
+                  'w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center',
+                  msg.role === 'user' ? 'bg-terracotta ml-3' : 'bg-forest mr-3'
                 )}>
-                  {msg.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Bot className="w-4 h-4 text-terracotta" />}
+                  {msg.role === 'user'
+                    ? <User className="w-4 h-4 text-white" />
+                    : <Bot className="w-4 h-4 text-terracotta" />}
                 </div>
                 <div className={cn(
-                  "p-5 rounded-2xl text-sm font-medium leading-relaxed shadow-sm",
-                  msg.role === 'user' ? "bg-white text-forest rounded-tr-none" : "bg-forest text-cream rounded-tl-none"
+                  'p-5 rounded-2xl text-sm font-medium leading-relaxed shadow-sm',
+                  msg.role === 'user'
+                    ? 'bg-white text-forest rounded-tr-none'
+                    : 'bg-forest text-cream rounded-tl-none'
                 )}>
                   {msg.content.split('\n').map((line, j) => (
-                    <p key={j} className={j > 0 ? "mt-2" : ""}>{line}</p>
+                    <p key={j} className={j > 0 ? 'mt-2' : ''}>{line}</p>
                   ))}
                 </div>
               </div>
             ))}
+
+            {isLoading && (
+              <div className="flex mr-auto max-w-[80%]">
+                <div className="w-8 h-8 rounded-lg bg-forest flex-shrink-0 mr-3 flex items-center justify-center">
+                  <Bot className="w-4 h-4 text-terracotta" />
+                </div>
+                <div className="p-5 rounded-2xl bg-forest rounded-tl-none shadow-sm flex items-center space-x-2">
+                  <Loader2 className="w-4 h-4 text-terracotta animate-spin" />
+                  <span className="text-cream text-sm font-medium">Thinking...</span>
+                </div>
+              </div>
+            )}
+
+            <div ref={chatEndRef} />
           </div>
 
           <div className="p-6 bg-white rounded-b-3xl border-t border-forest/5">
             <div className="relative">
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                 placeholder="Ask your knowledge base anything..."
                 className="input-field pr-24 py-4"
+                disabled={isLoading}
               />
               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-1">
                 <button className="p-2 text-forest/20 hover:text-forest/40 transition-colors">
                   <Paperclip className="w-5 h-5" />
                 </button>
-                <button className="p-2 bg-terracotta text-white rounded-xl hover:bg-terracotta/90 transition-colors shadow-md shadow-terracotta/20">
+                <button
+                  onClick={handleSend}
+                  disabled={!query.trim() || isLoading}
+                  className="p-2 bg-terracotta text-white rounded-xl hover:bg-terracotta/90 transition-colors shadow-md shadow-terracotta/20 disabled:opacity-40"
+                >
                   <Send className="w-5 h-5" />
                 </button>
               </div>

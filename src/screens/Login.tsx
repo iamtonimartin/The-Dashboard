@@ -1,28 +1,31 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Lock, Zap } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
-interface LoginProps {
-  onLogin: () => void;
-}
-
-export default function Login({ onLogin }: LoginProps) {
-  const [email, setEmail] = useState('toni@vibecoding.lab');
-  const [password, setPassword] = useState('password');
+export default function Login() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      onLogin();
+    setError('');
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      setError(error.message);
       setLoading(false);
-    }, 1500);
+    }
+    // On success, App.tsx's onAuthStateChange listener handles the redirect automatically
   };
 
   return (
     <div className="min-h-screen bg-forest flex items-center justify-center p-6">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md bg-cream rounded-[2.5rem] p-10 shadow-2xl relative overflow-hidden"
@@ -45,11 +48,11 @@ export default function Login({ onLogin }: LoginProps) {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-widest text-forest/40 ml-1">Email Address</label>
-              <input 
-                type="email" 
+              <input
+                type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="input-field bg-white" 
+                className="input-field bg-white"
                 placeholder="name@company.com"
                 required
               />
@@ -58,11 +61,11 @@ export default function Login({ onLogin }: LoginProps) {
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-widest text-forest/40 ml-1">Password</label>
               <div className="relative">
-                <input 
-                  type="password" 
+                <input
+                  type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="input-field bg-white pr-12" 
+                  className="input-field bg-white pr-12"
                   placeholder="••••••••"
                   required
                 />
@@ -70,8 +73,14 @@ export default function Login({ onLogin }: LoginProps) {
               </div>
             </div>
 
-            <button 
-              type="submit" 
+            {error && (
+              <p className="text-sm text-red-600 bg-red-50 rounded-xl px-4 py-3 font-medium">
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
               disabled={loading}
               className="btn-primary w-full py-4 text-lg shadow-lg shadow-terracotta/20 flex items-center justify-center space-x-2"
             >
