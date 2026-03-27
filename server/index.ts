@@ -6,7 +6,17 @@ import OpenAI from 'openai';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Lazy-initialised so the server starts even if OPENAI_API_KEY isn't set yet
+let _openai: OpenAI | null = null;
+function getOpenAI(): OpenAI {
+  if (!_openai) {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY environment variable is not set.');
+    }
+    _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return _openai;
+}
 
 // Allow large payloads for receipt image uploads
 app.use(express.json({ limit: '10mb' }));
@@ -30,7 +40,7 @@ app.post('/api/ai/draft-post', async (req, res) => {
   const format = platformGuides[platform] ?? platformGuides.linkedin;
 
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -55,7 +65,7 @@ app.post('/api/ai/draft-post', async (req, res) => {
 // Returns 6 fresh content ideas for the Content Studio
 app.post('/api/ai/generate-ideas', async (req, res) => {
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -89,7 +99,7 @@ app.post('/api/ai/chat', async (req, res) => {
   }
 
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
@@ -121,7 +131,7 @@ app.post('/api/ai/parse-receipt', async (req, res) => {
   }
 
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
